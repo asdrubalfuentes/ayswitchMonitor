@@ -1,0 +1,126 @@
+<%- include('head', {tituloweb: 'Acceso por Contraseña'}); %>
+<body class="bg-light text-yellow text-center shadow-lg" onload="onload();">
+
+    <div class="container-fluid p-5 bg-light text-primary text-center shadow-lg">
+      <h1>Inscripción</h1>
+      <p class= "text-danger-emphasis">Escriba los datos Solicitados</p>
+    </div>
+    <div id="msg">
+        
+    </div>
+    </div>
+      
+    <div class="container-fluid p-5 bg-light text-Grey text-center shadow-lg">
+      <div class="row" >
+        <div class="col-sm-4">
+    
+        </div>
+        <div class="col-sm-4">
+            <div class="row">
+                <div class="container mt-3">                      
+                    <form class="was-validated" id="formRegister">
+                      <div class="mb-3 mt-3">
+                        <label for="inputMail" class="form-label">Introduzca su email de Registro</label>
+                        <input type="text-email" class="form-control" id="inputMail" placeholder="Introduzca Su Correo" name="email" required >
+                        <div class="valid-feedback">Valido</div>
+                        <div class="invalid-feedback">Por favor rellene correctamente</div>
+                      </div>
+                      <div class="mb-3 mt-3">
+                        <label for="inputname" class="form-label">Introduzca su Nombre Completo</label>
+                        <input type="text" class="form-control" id="inputname" placeholder="Introduzca su Nombre" name="name" required >
+                        <div class="valid-feedback">Valido</div>
+                        <div class="invalid-feedback">Por favor rellene correctamente</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="inputPasswd" class="form-label">Escriba su Contrseña:</label>
+                        <input type="password" class="form-control" id="inputPasswd" placeholder="Ingrese su Contraseña y Recuérdela" name="passwd" required> 
+                        <div class="valid-feedback">Valido</div>
+                        <div class="invalid-feedback">Por favor rellene correctamente</div>
+                      </div>
+                      <input type="hidden" value="" id="token" name="token">
+                    <button type="submit" class="btn btn-primary">Acceder</button>
+                    </form>
+                    <br>
+                    <a href="/api/user/pwdchange"><strong style="color:blue">¿Olvidó su contraseña?</strong></a>
+                    <br>
+                    <a href="/api/user/login"><strong style="color:orange">"Inicie Sesion, si está inscrito"</strong></a>
+
+            </div>
+    
+    
+        </div>
+        <div class="col-sm-4">
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 p-5 bg-LightGrey text-info rounded">
+        <h1>Aysafi</h1>
+        <p class="text-warning">Sistemas electrónicos...</p>
+    </div>
+    
+    <script>
+        function onload(){
+            const token = document.URL.substr(document.URL.indexOf('=')+1);
+            console.log(token);  
+            const inputToken = document.getElementById('token');
+            inputToken.value = token;
+        }
+
+        const formRegister = document.querySelector('#formRegister');
+        const mensajeador = document.querySelector('#msg')
+
+        formRegister.addEventListener('submit', async(e) => {
+            e.preventDefault()
+            // Alternativa #1 (capturar input)
+            const email = document.querySelector('#inputMail').value
+            // Alternativa #2 (capturar input)
+            const password = document.querySelector('#inputPasswd').value
+
+            const name = document.querySelector('#inputname').value
+
+            //if(token) user = decodeJWT(token);
+
+            const data = await fetch(`/api/user/register`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                // 'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: JSON.stringify({email, password, name})
+            })
+
+            const res = await data.json()
+
+            if(res.error==null){
+                window.location.href = '/api/user/login';
+                console.log(res);
+            }else{
+                console.log(res.error);
+                mensajeador.innerHTML="";
+                mensajeador.append(res.error);
+                mensajeador.setAttribute('style',"color:Red");
+            }
+
+        })
+
+
+        function revisaSimilar(){
+            var password1 = document.getElementById('pass1');
+            var password2 = document.getElementById('pass2');
+            if (password1.value != password2.value) {
+                //password2.className['was-validated'] = false;
+                console.log("Valido = ", "falso");
+                password2.className = "form-control is-invalid"
+            }else{
+                //password2.className['was-validated']  = true;
+                console.log("Valido = ", "Verdadero");
+                password2.className = "form-control is-valid"
+            }
+ 
+        }
+    
+    
+    </script>
+    
+    </body>
+    </html>

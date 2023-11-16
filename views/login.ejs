@@ -1,0 +1,121 @@
+<%- include('head', {tituloweb: 'Acceso por Contraseña'}); %>
+<body class="bg-light text-yellow text-center shadow-lg" onload="onload();">
+
+    <div class="container-fluid p-5 bg-light text-primary text-center shadow-lg">
+      <h1>Acceso</h1>
+      <p class= "text-danger-emphasis">Escriba sus Credenciales de Inicio</p>
+
+    </div>
+    <div id="msg">
+</div>
+    </div>
+      
+    <div class="container-fluid p-5 bg-light text-Grey text-center shadow-lg">
+      <div class="row" >
+        <div class="col-sm-4">
+    
+        </div>
+        <div class="col-sm-4">
+            <div class="row">
+                <div class="container mt-3">                      
+                    <form class="was-validated" id="formLogin">
+                      <div class="mb-3 mt-3">
+                        <label for="uname" class="form-label">Introduzca su email de Registro</label>
+                        <input type="text-email" class="form-control" id="inputMail" placeholder="Introduzca Su Correo" name="email" required >
+                        <div class="valid-feedback">Valido</div>
+                        <div class="invalid-feedback">Por favor rellene correctamente</div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="inputPasswd" class="form-label">Escriba su Contrseña:</label>
+                        <input type="password" class="form-control" id="inputPasswd" placeholder="Ingrese su Contraseña" name="passwd" required> 
+                        <div class="valid-feedback">Valido</div>
+                        <div class="invalid-feedback">Por favor rellene correctamente</div>
+                      </div>
+                      <input type="hidden" value="" id="token" name="token">
+                    <button type="submit" class="btn btn-primary">Acceder</button>
+                    </form>
+                    <br>
+                    <a href="/api/user/pwdchange"><strong style="color:blue">¿Olvidó su contraseña?</strong></a>
+                    <br>
+                    <a href="/api/user/register"><strong style="color:orange">¿Aún no registrado?</strong></a>
+                  </div>
+            </div>
+    
+    
+        </div>
+        <div class="col-sm-4">
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 p-5 bg-LightGrey text-info rounded">
+        <h1>Aysafi</h1>
+        <p class="text-warning">Sistemas electrónicos...</p>
+    </div>
+    
+    <script>
+        function onload(){
+            const token = document.URL.substr(document.URL.indexOf('=')+1);
+            console.log(token);  
+            const inputToken = document.getElementById('token');
+            inputToken.value = token;
+        }
+
+        const formLogin = document.querySelector('#formLogin');
+        const mensajeador = document.querySelector('#msg');
+
+        formLogin.addEventListener('submit', async(e) => {
+            e.preventDefault()
+            // Alternativa #1 (capturar input)
+            const email = document.querySelector('#inputMail').value
+            // Alternativa #2 (capturar input)
+            const password = document.querySelector('#inputPasswd').value
+
+            const token = document.querySelector('#token').value
+
+            //if(token) user = decodeJWT(token);
+
+            const data = await fetch(`/api/user/login`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                // 'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: JSON.stringify({email, password})
+            })
+
+            const res = await data.json()
+
+            if(res.error==null){
+                window.location.href = '/api/dashboard/?auth_token='+res.data.token;
+
+                c//onsole.log(res.data);
+            }else{
+                console.log(res.error);
+                mensajeador.innerHTML="";
+                mensajeador.append(res.error);
+                mensajeador.setAttribute('style',"color:Red");
+            }
+
+        })
+
+
+        function revisaSimilar(){
+            var password1 = document.getElementById('pass1');
+            var password2 = document.getElementById('pass2');
+            if (password1.value != password2.value) {
+                //password2.className['was-validated'] = false;
+                console.log("Valido = ", "falso");
+                password2.className = "form-control is-invalid"
+            }else{
+                //password2.className['was-validated']  = true;
+                console.log("Valido = ", "Verdadero");
+                password2.className = "form-control is-valid"
+            }
+ 
+        }
+    
+    
+    </script>
+    
+    </body>
+    </html>

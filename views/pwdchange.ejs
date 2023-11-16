@@ -1,0 +1,106 @@
+<%- include('head', {tituloweb: 'Acceso por Contraseña'}); %>
+<body class="bg-light text-yellow text-center shadow-lg" >
+
+    <div class="container-fluid p-5 bg-light text-primary text-center shadow-lg">
+      <h1>Acceso</h1>
+      <p class= "text-danger-emphasis">Escriba sus Credenciales de Inicio</p>
+    </div>
+      
+    <div class="container-fluid p-5 bg-light text-Grey text-center shadow-lg">
+      <div class="row" >
+        <div class="col-sm-4">
+    
+        </div>
+        <div class="col-sm-4">
+            <div class="row">
+                <div class="container mt-3">                      
+                    <form class="was-validated" id="formpwdchange">
+                      <div class="mb-3 mt-3">
+                        <label for="uname" class="form-label">Introduzca su email de Registro</label>
+                        <input type="text-email" class="form-control" id="inputMail" placeholder="Introduzca Su Correo" name="email" required >
+                        <div class="valid-feedback">Valido</div>
+                        <div class="invalid-feedback">Por favor rellene correctamente</div>
+                      </div>
+                    <button type="submit" class="btn btn-primary">Solicitar Cambio...</button>
+                    </form>
+                  </div>
+            </div>
+            <br>
+            <div id="msg">
+            </div>
+    
+    
+        </div>
+        <div class="col-sm-4">
+        </div>
+      </div>
+    </div>
+    <div class="mt-4 p-5 bg-LightGrey text-info rounded">
+        <h1>Aysafi</h1>
+        <p class="text-warning">Sistemas electrónicos...</p>
+    </div>
+    
+    <script>
+        function onload(){
+            const token = document.URL.substr(document.URL.indexOf('=')+1);
+            console.log(token);  
+            const inputToken = document.getElementById('token');
+            inputToken.value = token;
+        }
+
+        const formEditar = document.querySelector('#formpwdchange');
+        const mensajeador = document.querySelector('#msg');
+
+        formEditar.addEventListener('submit', async(e) => {
+            e.preventDefault()
+            // Alternativa #1 (capturar input)
+            const emailobjet = document.querySelector('#inputMail');
+
+            const email = emailobjet.value;
+
+            const data = await fetch(`/api/user/recover`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                // 'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: JSON.stringify({email})
+            })
+
+            const res = await data.json()
+            const mensajeador = document.querySelector('#msg');
+            if(res.error==null){
+                mensajeador.innerHTML="";
+                mensajeador.append(res.data);
+                email.enabled = false;
+                console.log(res)
+            }else{
+                console.log(res.error);
+                mensajeador.innerHTML="";
+                mensajeador.append(res.data,res.error);
+                mensajeador.setAttribute('style',"color:Red");
+            }
+
+        })
+
+
+        function revisaSimilar(){
+            var password1 = document.getElementById('pass1');
+            var password2 = document.getElementById('pass2');
+            if (password1.value != password2.value) {
+                //password2.className['was-validated'] = false;
+                console.log("Valido = ", "falso");
+                password2.className = "form-control is-invalid"
+            }else{
+                //password2.className['was-validated']  = true;
+                console.log("Valido = ", "Verdadero");
+                password2.className = "form-control is-valid"
+            }
+ 
+        }
+    
+    
+    </script>
+    
+    </body>
+    </html>
