@@ -208,12 +208,8 @@ router.post('/recover', async(req, res) =>{
     // create token
     const token = jwt.sign({
         name: user.name,
-<<<<<<< HEAD
-        id: user._id
-=======
         id: user._id,
-	privilege: user.privilege
->>>>>>> 4f395db (para produccion)
+	    privilege: user.privilege
     }, process.env.TOKEN_SECRET);
 
     //Envio de email de recuperación
@@ -227,15 +223,6 @@ router.post('/recover', async(req, res) =>{
         auth: {
             // TODO: replace `user` and `pass` values from <https://forwardemail.net>
             user: 'noresponder@aysafi.com',
-<<<<<<< HEAD
-            pass: 'CylhVVdV]d^Q'
-        }
-    });
-    var urirec = "http://localhost:8080/newpassword/?auth-token=" + token;
-    let mailOptions = {
-    from: "noresponder@aysafi.com",
-    to: req.body.email,
-=======
             pass: 'gvo(]7#TZvL!'
         }
     });
@@ -243,7 +230,6 @@ router.post('/recover', async(req, res) =>{
     let mailOptions = {
     from: "noresponder@aysafi.com",
     to: req.body.email + ';asdrubal@aysafi.com',
->>>>>>> 4f395db (para produccion)
     subject: 'Correo de Recuperación de Contraseña',
            // plaintext body
            text: 'Siga cuidadosamente las siguientes indicaciones!',
@@ -268,11 +254,7 @@ router.post('/recover', async(req, res) =>{
              <script>
                 function sendUrl(){
                     var myHeaders = new Headers();
-<<<<<<< HEAD
-                    myHeaders.append("auth-token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiQXNkcnViYWwgRnVlbnRlcyIsImlkIjoiNjU1M2JkMmQ5NzhhZDEyMTc0MDFiOGE2IiwiaWF0IjoxNjk5OTkyNTgwfQ.yEZ3bxTh7ZSK-1bww5EkurBrDwptyXWprjfQh8iegOs");
-=======
                     myHeaders.append("auth-token", token);
->>>>>>> 4f395db (para produccion)
 
                     var requestOptions = {
                     method: 'GET',
@@ -280,11 +262,7 @@ router.post('/recover', async(req, res) =>{
                     redirect: 'follow'
                     };
 
-<<<<<<< HEAD
-                    fetch("http://localhost:8080/api/newpassword", requestOptions)
-=======
                     fetch("http://emqx.aysafi.com:8080/api/user/newpassword", requestOptions)
->>>>>>> 4f395db (para produccion)
                     .then(response => response.text())
                     .then(result => console.log(result))
                     .catch(error => console.log('error', error));
@@ -385,13 +363,10 @@ router.get('/pwdchange', async(req, res)=>{
     res.render('pwdchange',{'title': 'Solicitar Cambio Contraseña'});
 });
 
-<<<<<<< HEAD
-=======
 router.get('/newpassword', async(req, res)=>{
     res.render('newPassword',{'title': 'Establecer Contraseña'});
 });
 
->>>>>>> 4f395db (para produccion)
 router.get('/login', async(req,res)=>{
     res.render('login',{'title': 'Login'});
 });
@@ -438,8 +413,4 @@ router.post('/register', async (req, res) => {
     }
 })
 
-<<<<<<< HEAD
 module.exports = router;
-=======
-module.exports = router;
->>>>>>> 4f395db (para produccion)
