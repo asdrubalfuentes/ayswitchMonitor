@@ -29,7 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 
 
 // Conexión a Base de datos
-const uri = `mongodb://localhost:27017/dbAysafi`;
+const uri = `mongodb://aysafiadmin:REDACTED_PASSWORD@localhost:17027/dbAysafi`;
 mongoose.connect(uri)
 .then(() => console.log('Base de datos conectada'))
 .catch(e => console.log('error db:', e))
