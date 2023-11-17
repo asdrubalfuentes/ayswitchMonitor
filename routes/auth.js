@@ -1,9 +1,6 @@
 const router = require('express').Router();
-<<<<<<< HEAD
-const User = require('../models/User');
-=======
+
 const User = require('../models/user');
->>>>>>> 4f395db (para produccion)
 
 const jwt = require('jsonwebtoken');
 
@@ -12,7 +9,7 @@ const Joi = require('@hapi/joi');
 const bcrypt = require('bcrypt');
 
 const expiresIn = 60000;
-//const user = require('../models/User');
+
 require('dotenv').config();
 
 const schemaRegister = Joi.object({
