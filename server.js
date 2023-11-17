@@ -45,9 +45,15 @@ app.use('/api/dashboard', verifyToken, dashboadRoutes);
 
 
 // simple route
+<<<<<<< HEAD
 app.get('/newpassword', (req, res) => {
 
   res.render('newPassword', {titulo:'Establecer Nueva Contraseña'} );
+=======
+app.get('/', (req, res) => {
+
+  res.redirect('/api/user/login');
+>>>>>>> 4f395db (para produccion)
 
 });
 
