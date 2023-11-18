@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const bodyparser = require('body-parser');
 const app = express();
 const mongoose = require('mongoose');
+const path = require('path');
 app.use(morgan('dev'));
 require('dotenv').config();
 
@@ -40,7 +41,7 @@ const authRoutes = require('./routes/auth');
 const dashboadRoutes = require('./routes/dashboard');
 const verifyToken = require('./routes/validate-token');
 
-app.use('/static', express.static(__dirname + 'views/assets'));
+app.use('/static', express.static(path.join(__dirname + 'public')));
 
 // route middlewares
 app.use('/api/user', authRoutes);
