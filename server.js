@@ -40,6 +40,8 @@ const authRoutes = require('./routes/auth');
 const dashboadRoutes = require('./routes/dashboard');
 const verifyToken = require('./routes/validate-token');
 
+app.use('/static', express.static(__dirname + 'views/assets'));
+
 // route middlewares
 app.use('/api/user', authRoutes);
 app.use('/api/dashboard', verifyToken, dashboadRoutes);
