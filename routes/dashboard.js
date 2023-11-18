@@ -22,7 +22,7 @@ router.get('/users', async(req,res)=>{
     res.render('userlist',{title:"Lista de Usuarios"});
 })
 
-router.get('/inicio', async(req,res)=>{
+router.get('/inicio/?', async(req,res)=>{
     //TODO: AGREGAR REVISION DE CABECERA if()
     console.log(req.query, "Estamos en Inicio");
     res.render('inicio',{title:"Control de Portones"});
