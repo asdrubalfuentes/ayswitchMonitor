@@ -17,4 +17,8 @@ router.get('/', (req, res) => {
     }
 })
 
+router.get('/users', async(req,res)=>{
+    res.render('userlist',{title:"Lista de Usuarios"});
+})
+
 module.exports = router
