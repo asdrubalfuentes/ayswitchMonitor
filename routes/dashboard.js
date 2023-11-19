@@ -25,7 +25,7 @@ router.get('/users', async(req,res)=>{
 router.get('/inicio/?', async(req,res)=>{
     //TODO: AGREGAR REVISION DE CABECERA if()
     console.log(req.query, "Estamos en Inicio");
-    res.render('inicio',{title:"Control de Portones"});
+    res.render('inicio',{title:"Control de Portones", token:req.query.auth_token, user:req.user});
 })
 
 module.exports = router
