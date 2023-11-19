@@ -1,10 +1,10 @@
 <%- include('head', {tituloweb: 'Acceso por Contraseña'}); %>
 <body class="bg-light text-yellow text-center shadow-lg" >
-
+<!--
     <div class="container-fluid p-5 bg-light text-primary text-center shadow-lg">
       <h1>Acceso</h1>
       <p class= "text-danger-emphasis">Escriba sus Credenciales de Inicio</p>
-    </div>
+    </div>-->
       
     <div class="container-fluid p-5 bg-light text-Grey text-center shadow-lg">
       <div class="row" >
@@ -13,7 +13,10 @@
         </div>
         <div class="col-sm-4">
             <div class="row">
-                <div class="container mt-3">                      
+                <div class="container mt-3"> 
+                    <h1 class="text text-primary">Proceso de Recuperación</h1>
+                    <p class= "text-danger-emphasis">Escriba sus Credenciales de Inicio</p>
+                    <div id="msg"></div>                      
                     <form class="was-validated" id="formpwdchange">
                       <div class="mb-3 mt-3">
                         <label for="uname" class="form-label">Introduzca su email de Registro</label>
@@ -36,8 +39,9 @@
       </div>
     </div>
     <div class="mt-4 p-5 bg-LightGrey text-info rounded">
-        <h1>Aysafi</h1>
-        <p class="text-warning">Sistemas electrónicos...</p>
+        <!---<h1>Aysafi</h1>
+        <p class="text-warning">Sistemas electrónicos...</p>--->
+        <img src="/static/LOGO.png" alt="" >
     </div>
     
     <script>
