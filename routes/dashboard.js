@@ -8,7 +8,7 @@ router.get('/', (req, res) => {
             user: req.user
         }
     })*/
-    if(req.user.id==='655754169607e1f015508545'){
+    if(req.user.id==='655754169607e1f015508545' || req.user.id==='655a94e7417e28fafd215c19'){
         //console.log(req.query);
         res.redirect('/api/dashboard/inicio/?auth_token=' + req.query.auth_token);
         //console.log('reenviado a su dashboard personal', '/api/dashboard/inicio'); //'http://emqx.aysafi.com:3001'
