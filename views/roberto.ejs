@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Control de Portones</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.png?auth_token=<%=token%>">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="/static/socket.io.js?auth_token=<%=token%>"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body class="bg-light text-yellow text-center shadow-lg">
+
+<div class="container-fluid p-5 bg-light text-primary text-center shadow-lg">
+  <h1>Hola, <%=user.name%></h1>
+  <p class= "text-danger-emphasis">Pinche Solo Una Vez el Botón Correspondiente a la Corredera de Salida o de Entrada</p>
+</div>
+  
+<div class="container-fluid p-5 bg-light text-Grey text-center shadow-lg">
+  <div class="row" >
+    <div class="col-sm-4">
+
+    </div>
+    <div class="col-sm-4">
+        <div class="row">
+            <h7>Portón de Entrada al Condominio</h7>
+            <br>
+            <!---<button type="button" class="btn btn-success" id="btnIn" style="box-shadow: 2px 2px 2px 2px rgb(45, 46, 49);"><strong>Pulse Para Entrar</strong></button>--->
+            <button type="button" class="h-75 btn btn-outline-info shadow-lg rounded-5 " id="btnIn" onclick="execDoor('Input');">
+                <span class="none" id="spanIn"></span>  
+                <h2 id="txtbtnIn">Pulse Para Entrar</h2>
+            </button>
+        </div>
+        <div class="row">
+            <br>
+            <br>
+        </div>
+        <div class="row">
+            <h7>Portón de Salida del Condominio</h7>
+            <br>
+            <!---<button type="button" class="btn btn-danger" id="btnOut" style="box-shadow: 2px 2px 2px 2px rgb(38, 39, 44);"><strong>Pulse Para Salir</strong> </button>--->
+            <button type="button" class="h-75 btn btn-outline-warning shadow-lg rounded-5" id="btnOut" onclick="execDoor('Output');">
+                <span class="none"  id="spanOut"></span> 
+                <h2 id="txtbtnOut">Pulse Para Salir</h2>
+            </button>       
+        </div>
+
+    </div>
+    <div class="col-sm-4">
+    </div>
+  </div>
+</div>
+<div class="mt-4 p-5 bg-LightGrey text-info rounded">
+    <!---<h1>Aysafi</h1>
+    <p class="text-warning">Sistemas electrónicos...</p>--->
+    <img src="/static/LOGO.png?auth_token=<%=token%>" alt="" >
+</div>
+
+<script>
+    /*var socket = io();
+    //var messages = document.getElementById('messages');
+    function execDoor(door){
+        if(door == 'Input'){
+            console.log("Entrada Presionada");
+            socket.emit('/testTopic', 'Rele 1 Pulsado');
+        }else if(door== 'Output'){
+            console.log("Salida Presionada");
+            socket.emit('/testTopic', 'Rele 2 Pulsado');
+        }
+
+    }
+
+    socket.on('/Comando', function(msg) {
+        console.log();
+    });*/
+
+        var spGiraPuerta1 = document.getElementById('spanIn');
+        var spGiraPuerta2 = document.getElementById('spanOut');
+        var botonPortonIn = document.getElementById('btnIn');
+        var botonPortonOut = document.getElementById('btnOut');
+        // Configura el cliente MQTT
+        var client = mqtt.connect('ws://emqx.aysafi.com:8083/mqtt', {
+            clientId: 'cliente-web'
+        });
+
+        // Suscríbete al tópico '/comando'
+        client.on('connect', function () {
+            console.log('Conexión exitosa al servidor MQTT');
+            client.subscribe('/comando', function (err) {
+                if (!err) {
+                    console.log('Suscripción exitosa al tópico /comando');
+                }
+            });
+        });
+    
+        // Maneja el mensaje recibido en el tópico
+        client.on('message', function (topic, message) {
+            // Aquí puedes manejar la lógica cuando llegue un mensaje al tópico
+            var msg = message.toString();
+            console.log('Mensaje recibido en el tópico ' + topic + ': ' + msg);
+            if(msg == 'Puerta 1'){
+                console.log("Puerta 1 Moviéndose");
+                spGiraPuerta1.className= 'spinner-border spinner-border text-danger';
+                botonPortonIn.disabled = true;
+                setTimeout(function(){
+                    spGiraPuerta1.className = 'none';
+                    console.log("Puerta 1 Cerrada");
+                    botonPortonIn.disabled = false;
+                }, 30000);
+            }else if(msg == 'Puerta 2'){
+                console.log("Puerta 2 Moviéndose");
+                spGiraPuerta2.className= 'spinner-border spinner-border text-danger';
+                botonPortonOut.disabled = true;
+                setTimeout(function(){
+                    spGiraPuerta2.className = 'none';
+                    console.log("Puerta 2 Cerrada");
+                    botonPortonOut.disabled = false;
+                }, 30000);
+            }
+        });
+
+
+
+        function execDoor(door){
+            if(door == 'Input'){
+                console.log("Entrada Presionada");
+                //socket.emit('/testTopic', 'Rele 1 Pulsado');
+                client.publish('/testTopic', 'Rele 1 Pulsado');
+            }else if(door== 'Output'){
+                console.log("Salida Presionada");
+                client.publish('/testTopic', 'Rele 2 Pulsado');
+            }
+    
+        }
+    
+
+    
+</script>
+
+</body>
+</html>
