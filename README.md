@@ -1,5 +1,4 @@
 # ayswitchMonitor
-```markdown
 # Repositorio CloudDeviceControl
 
 ## Autor
@@ -37,4 +36,3 @@ Para obtener más información, consulte la documentación en nuestra wiki.
 
 --- 
 *Aysafi no se hace responsable del mal uso de este software. Por favor, utilícelo de acuerdo con las leyes y regulaciones locales.*
-```
