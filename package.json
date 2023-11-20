@@ -2,10 +2,10 @@
   "name": "ayswitchmonitor",
   "version": "1.0.0",
   "description": "Monitor y mando aysafi",
-  "main": "server.js",
+  "main":"ayswitchmonitor.js",
   "scripts": {
-    "dev": "nodemon server",
-    "start": "node server"
+    "dev": "nodemon ayswitchmonitor",
+    "start": "node ayswitchmonitor"
   },
   "author": "Asdrubal Fuentes (aysafi)",
   "license": "MIT",
