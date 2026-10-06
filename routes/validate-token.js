@@ -11,10 +11,6 @@ function readCookie(req, name) {
     return null;
 }
 
-function adminEmails() {
-    return String(process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-}
-
 // Devuelve el usuario de la sesión o null. El token viaja en una cookie
 // HttpOnly, nunca en la URL, y además se comprueba contra la base: un usuario
 // borrado o con la contraseña cambiada después de emitido el token queda fuera.
@@ -26,7 +22,7 @@ async function authenticate(req) {
         // Los tokens anteriores a este esquema no traen vencimiento (no
         // expiraban nunca y algunos quedaron en logs): se rechazan.
         if (!payload.exp || !payload.id) return null;
-        const user = await User.findById(payload.id).select('name email services passwordChangedAt').lean();
+        const user = await User.findById(payload.id).select('name email privilege services passwordChangedAt').lean();
         if (!user) return null;
         if (user.passwordChangedAt && payload.iat < Math.floor(user.passwordChangedAt / 1000)) return null;
         return {
@@ -34,7 +30,7 @@ async function authenticate(req) {
             name: user.name,
             email: user.email,
             services: user.services,
-            isAdmin: adminEmails().includes(String(user.email).toLowerCase())
+            isAdmin: user.privilege === 'admin'
         };
     } catch (error) {
         return null;

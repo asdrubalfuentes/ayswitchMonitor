@@ -1,37 +1,40 @@
 const router = require('express').Router();
 
+// Paneles disponibles. Quién ve cuál sale de la base de datos: el campo
+// `services` del usuario lleva "panel:<clave>" (se administra con
+// PUT/DELETE /api/user/services/:id). Un administrador ve todos.
+const PANELS = {
+    inicio: { label: 'Inicio', path: '/api/dashboard/inicio/' },
+    roberto: { label: 'Roberto', path: '/api/dashboard/roberto/' }
+};
+
+function panelsOf(user) {
+    return Object.entries(PANELS)
+        .filter(([key]) => user.isAdmin || (user.services || []).includes('panel:' + key))
+        .map(([key, panel]) => ({ key, ...panel }));
+}
+
+const requirePanel = (key) => (req, res, next) => {
+    if (panelsOf(req.user).some((p) => p.key === key)) return next();
+    res.status(403).send('No tiene acceso a este panel.');
+};
+
 router.get('/', (req, res) => {
-    /*res.json({
-        error: null,
-        data: {
-            title: 'mi ruta protegida',
-            user: req.user
-        }
-    })*/
-    if(req.user.id==='655754169607e1f015508545' || req.user.id==='655a94e7417e28fafd215c19' || req.user.id==='655a99f354b440a5551cd4d3' || req.user.id==='655a9ab154b440a5551cd4d6'){
-        //console.log(req.query);
-        res.redirect('/api/dashboard/inicio/');
-        //console.log('reenviado a su dashboard personal', '/api/dashboard/inicio'); //'http://emqx.aysafi.com:3001'
-    }else if(req.user.id==='6557548c9607e1f015508548' || req.user.id==='655754ec9607e1f01550854b'){
-        res.redirect('/api/dashboard/roberto/');
-        //console.log('reenviado a su dashboard personal', 'http://emqx.aysafi.com:3000');
-    }else{
-        res.status(403).send('Su cuenta aun no tiene un panel asignado. Contacte al administrador.');
-    }
+    const panels = panelsOf(req.user);
+    if (!panels.length) return res.status(403).send('Su cuenta aun no tiene un panel asignado. Contacte al administrador.');
+    res.redirect(panels[0].path);
 })
 
 router.get('/users', async(req,res)=>{
     res.render('userlist',{title:"Lista de Usuarios"});
 })
 
-router.get('/inicio/?', async(req,res)=>{
-    //console.log(req.query, "Estamos en Inicio");
-    res.render('inicio',{title:"Control de Portones", user:req.user});
+router.get('/inicio/?', requirePanel('inicio'), async(req,res)=>{
+    res.render('inicio',{title:"Control de Portones", user:req.user, panels:panelsOf(req.user), current:'inicio'});
 })
 
-router.get('/roberto/?', async(req,res)=>{
-    //console.log(req.query, "Estamos en Inicio");
-    res.render('roberto',{title:"Control de Portones", user:req.user});
+router.get('/roberto/?', requirePanel('roberto'), async(req,res)=>{
+    res.render('roberto',{title:"Control de Portones", user:req.user, panels:panelsOf(req.user), current:'roberto'});
 })
 
 module.exports = router
