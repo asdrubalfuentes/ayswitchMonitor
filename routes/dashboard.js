@@ -10,10 +10,10 @@ router.get('/', (req, res) => {
     })*/
     if(req.user.id==='655754169607e1f015508545' || req.user.id==='655a94e7417e28fafd215c19' || req.user.id==='655a99f354b440a5551cd4d3' || req.user.id==='655a9ab154b440a5551cd4d6'){
         //console.log(req.query);
-        res.redirect('/api/dashboard/inicio/?auth_token=' + req.query.auth_token);
+        res.redirect('/api/dashboard/inicio/');
         //console.log('reenviado a su dashboard personal', '/api/dashboard/inicio'); //'http://emqx.aysafi.com:3001'
     }else if(req.user.id==='6557548c9607e1f015508548' || req.user.id==='655754ec9607e1f01550854b'){
-        res.redirect('/api/dashboard/roberto/?auth_token=' + req.query.auth_token);
+        res.redirect('/api/dashboard/roberto/');
         //console.log('reenviado a su dashboard personal', 'http://emqx.aysafi.com:3000');
     }
 })
@@ -24,12 +24,12 @@ router.get('/users', async(req,res)=>{
 
 router.get('/inicio/?', async(req,res)=>{
     //console.log(req.query, "Estamos en Inicio");
-    res.render('inicio',{title:"Control de Portones", token:req.query.auth_token, user:req.user});
+    res.render('inicio',{title:"Control de Portones", user:req.user});
 })
 
 router.get('/roberto/?', async(req,res)=>{
     //console.log(req.query, "Estamos en Inicio");
-    res.render('roberto',{title:"Control de Portones", token:req.query.auth_token, user:req.user});
+    res.render('roberto',{title:"Control de Portones", user:req.user});
 })
 
 module.exports = router

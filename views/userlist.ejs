@@ -55,7 +55,6 @@
     <script>
         function onload(){
             const token = document.URL.substr(document.URL.indexOf('=')+1);
-            console.log(token);  
             const inputToken = document.getElementById('token');
             inputToken.value = token;
         }
@@ -86,7 +85,7 @@
             const res = await data.json()
 
             if(res.error==null){
-                window.location.href = '/api/dashboard/?auth_token='+res.data.token;
+                window.location.href = '/api/dashboard/';
 
                 c//onsole.log(res.data);
             }else{

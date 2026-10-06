@@ -5,7 +5,8 @@ const bodyparser = require('body-parser');
 const app = express();
 const mongoose = require('mongoose');
 const path = require('path');
-app.use(morgan('dev'));
+morgan.token('path', (req) => (req.originalUrl || req.url).split('?')[0]);
+app.use(morgan(':method :path :status :response-time ms - :res[content-length]'));
 require('dotenv').config();
 
 var corsOptions = {

@@ -342,8 +342,14 @@ router.post('/login', async (req, res) => {
     const token = jwt.sign({
         name: user.name,
         id: user._id
-    }, process.env.TOKEN_SECRET);
-    
+    }, process.env.TOKEN_SECRET, { expiresIn: '30d' });
+
+    res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
+    });
     res.header('auth-token', token).json({
         error: null,
         data: {token}
@@ -353,6 +359,11 @@ router.post('/login', async (req, res) => {
         error: null,
         data: 'exito bienvenido'
     })*/
+});
+
+router.get('/logout', (req, res) => {
+    res.clearCookie('auth_token', { httpOnly: true, secure: true, sameSite: 'lax' });
+    res.redirect('/api/user/login');
 });
 
 router.get('/pwdchange', async(req, res)=>{
