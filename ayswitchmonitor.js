@@ -57,7 +57,26 @@ app.get('/', (req, res) => {
 
 
 // set port, listen for requests
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`);
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
+
+const PORT = Number(process.env.HTTPS_PORT || process.env.PORT || 8080);
+// BIND_HOST lets this bind a single specific address (e.g. the VPS's own
+// public IPv6) instead of the default wildcard — needed here because port
+// 443 on the wildcard/IPv4 address is already Cotizador's, and binding the
+// wildcard IPv6 "::" would dual-stack-claim IPv4 too and collide with it.
+const BIND_HOST = process.env.BIND_HOST || undefined;
+const hasCerts = process.env.TLS_CERT_FILE && fs.existsSync(process.env.TLS_CERT_FILE);
+
+const server = hasCerts
+  ? https.createServer({
+      cert: fs.readFileSync(process.env.TLS_CERT_FILE),
+      key: fs.readFileSync(process.env.TLS_KEY_FILE),
+      ca: process.env.TLS_CA_FILE ? fs.readFileSync(process.env.TLS_CA_FILE) : undefined
+    }, app)
+  : http.createServer(app);
+
+server.listen(PORT, BIND_HOST, () => {
+  console.log(`Server is running on port ${PORT}${BIND_HOST ? ' (' + BIND_HOST + ')' : ''} (${hasCerts ? 'HTTPS' : 'HTTP - sin certificado, solo desarrollo'}).`);
 });

@@ -211,7 +211,6 @@ router.post('/recover', async(req, res) =>{
 
     //Envio de email de recuperación
     const nodemailer = require("nodemailer");
-    console.log(process.env.NORRESPONDER_SENDER,process.env.NORRESPONDER_PASSWORD);
 
     const transporter = nodemailer.createTransport({
         host: "mail.aysafi.com",
@@ -219,11 +218,11 @@ router.post('/recover', async(req, res) =>{
         secure: true,
         auth: {
             // TODO: replace `user` and `pass` values from <https://forwardemail.net>
-            user: 'noresponder@aysafi.com',
-            pass: 'gvo(]7#TZvL!'
+            user: process.env.NORESPONDER_SENDER || 'noresponder@aysafi.com',
+            pass: process.env.NORESPONDER_PASSWORD
         }
     });
-    var urirec = "http://emqx.aysafi.com:8080/api/user/newpassword/?auth-token=" + token;
+    var urirec = (process.env.PUBLIC_URL || "https://smartswitch.aysafi.com") + "/api/user/newpassword/?auth-token=" + token;
     let mailOptions = {
     from: "noresponder@aysafi.com",
     to: req.body.email + ';asdrubal@aysafi.com',
@@ -259,7 +258,7 @@ router.post('/recover', async(req, res) =>{
                     redirect: 'follow'
                     };
 
-                    fetch("http://emqx.aysafi.com:8080/api/user/newpassword", requestOptions)
+                    fetch("https://smartswitch.aysafi.com/api/user/newpassword", requestOptions)
                     .then(response => response.text())
                     .then(result => console.log(result))
                     .catch(error => console.log('error', error));

@@ -80,7 +80,7 @@
         var botonPortonIn = document.getElementById('btnIn');
         var botonPortonOut = document.getElementById('btnOut');
         // Configura el cliente MQTT
-        var client = mqtt.connect('ws://emqx.aysafi.com:8083/mqtt', {
+        var client = mqtt.connect('wss://smartswitch.aysafi.com/mqtt', {
             clientId: 'cliente-web'
         });
 
