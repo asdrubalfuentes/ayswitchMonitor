@@ -35,6 +35,20 @@ const userSchema = mongoose.Schema({
     date: {
         type: Date,
         default: Date.now
+    },
+    // Recuperación de contraseña: se guarda solo el hash SHA-256 del token
+    // (el token en claro viaja únicamente en el correo), de un solo uso.
+    resetTokenHash: {
+        type: String,
+        select: false
+    },
+    resetTokenExpires: {
+        type: Number,
+        select: false
+    },
+    // Las sesiones emitidas antes de este instante dejan de valer.
+    passwordChangedAt: {
+        type: Number
     }
 })
 

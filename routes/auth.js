@@ -1,21 +1,28 @@
 const router = require('express').Router();
-
-const User = require('../models/user');
-
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-
 const Joi = require('@hapi/joi');
-
 const bcrypt = require('bcrypt');
-
-const expiresIn = 60000;
+const mongoose = require('mongoose');
+const nodemailer = require('nodemailer');
+const { rateLimit } = require('express-rate-limit');
 
 require('dotenv').config();
+
+const User = require('../models/user');
+const { requireAdmin, requireAdminPage } = require('./validate-token');
+
+const SESSION_DAYS = 30;
+const RESET_TTL_MS = 30 * 60 * 1000;
+// Nunca se devuelve el hash de la contraseña ni los datos de recuperación.
+const SAFE_FIELDS = '-password -resetTokenHash -resetTokenExpires';
+// Para que login tarde parecido exista o no el correo.
+const DUMMY_HASH = bcrypt.hashSync('sin-usuario', 10);
 
 const schemaRegister = Joi.object({
     name: Joi.string().min(6).max(255).required(),
     email: Joi.string().min(6).max(255).required().email(),
-    password: Joi.string().min(6).max(1024).required()
+    password: Joi.string().min(8).max(72).required()
 })
 
 const schemaLogin = Joi.object({
@@ -27,338 +34,154 @@ const schemaRecover = Joi.object({
     email: Joi.string().min(6).max(255).required().email()
 })
 
-const schemaPasswordNew = Joi.object({
-    passwd: Joi.string().min(3).max(15).required(),
-    repasswd: Joi.string().min(3).max(15).required(),
-    token: Joi.string().min(3).max(1024).required(),
-});
+const schemaService = Joi.object({
+    service: Joi.string().min(1).max(50).required()
+})
 
-router.post('/newpassword', async(req,res) => {
-    const {error} = schemaPasswordNew.validate(req.body);
-    if(error) return res.status(400).json({error: error.details[0].message });
-    
-    if(req.body.passwd != req.body.repasswd) return res.status(400).json({error: "las contraseñas no coinciden" });
-    // hash contraseña
-    const salt = await bcrypt.genSalt(10);
-    const password = await bcrypt.hash(req.body.passwd, salt);
-    const token = req.body.token
-    const composite = { password, token}
-
-    const user = decodeJWT(token);
-    console.log(user)
-
-    res.json({
-        error: null,
-        data: user.id
+function limiter(windowMs, limit, options = {}) {
+    return rateLimit({
+        windowMs,
+        limit,
+        standardHeaders: 'draft-7',
+        legacyHeaders: false,
+        message: { error: 'Demasiados intentos. Intente de nuevo más tarde.' },
+        ...options
     });
+}
+const loginLimiter = limiter(15 * 60 * 1000, 10, { skipSuccessfulRequests: true });
+const recoverLimiter = limiter(60 * 60 * 1000, 5);
+const resetLimiter = limiter(60 * 60 * 1000, 10);
 
-})
+const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
 
-router.delete('/:id', async(req,res)=>{
-    const id = req.params.id;
-    if (!id) return res.status(400).json({error: "El Id no puede estar vacío" });
-    try{
-        const resultado = await User.findOneAndDelete({_id:id});
-        if(!resultado) return res.status(400).json({error: "El Id ya no existe" });
-        res.json({
-            error:null,
-            data: resultado
-        })
-    }catch(error){
-        res.json({
-            error:error
-        })
-    }
-})
-
-router.get('/', async(req,res)=>{
-    try {
-        const resultado = await User.find();
-        if(!resultado) return res.status(400).json({error: "No existen datos" });
-        //const numeroDeObjetos = resultado.length();
-        res.json({
-            error:null,
-            data: resultado
-        })
-    } catch (error) {
-        res.json({
-            error:error
-        })
-    }
-})
-
-router.put('/services/:id', async(req,res)=>{
-    const id = req.params.id;
-    if (!id) return res.status(400).json({error: "El Id no puede estar vacío" });
-    try {
-        const UserToModify = await User.findOne({_id: id});
-        //console.log(UserToModify);
-        const UserToUpdate = UserToModify;
-        UserToUpdate.services.push(req.body.service);
-        //console.log(UserToUpdate);
-        const updated = await User.findOneAndUpdate(
-            {_id:id},
-            UserToUpdate,
-            {
-                new: true,                       // return updated doc
-                runValidators: true              // validate before update
+let transporter;
+function sendRecoveryMail(to, link) {
+    if (!transporter) {
+        transporter = nodemailer.createTransport({
+            host: 'mail.aysafi.com',
+            port: 465,
+            secure: true,
+            auth: {
+                user: process.env.NORESPONDER_SENDER || 'noresponder@aysafi.com',
+                pass: process.env.NORESPONDER_PASSWORD
             }
-        )
-          res.json({
-            error: null,
-            data: updated
-        })       
-    } catch (error) {
-        
+        });
     }
-})
-
-router.delete('/services/:id', async(req,res)=>{
-    const id = req.params.id;
-    if (!id) return res.status(400).json({error: "El Id no puede estar vacío" });
-    try {
-        const UserToModify = await User.findOne({_id: id});
-        //console.log(UserToModify);
-        const UserToUpdate = UserToModify;
-        let services = UserToUpdate.services
-        if(!services) return res.status(400).json({error: "El Id no contiene Servicios" });
-        const newServices = services.filter(servicio => servicio !== req.body.service);
-        console.log(services,newServices);
-        const isEqualArrays = newServices===services? true : false; 
-        console.log(isEqualArrays);
-        if(isEqualArrays) return res.status(400).json({error: "El Id no contiene \"" +  req.body.service + "\""});
-        else{
-            UserToUpdate.services = newServices;
-            //console.log(UserToUpdate);
-            const updated = await User.findOneAndUpdate(
-                {_id:id},
-                UserToUpdate,
-                {
-                    new: true,                       // return updated doc
-                    runValidators: true              // validate before update
-                }
-            )
-              res.json({
-                error: null,
-                data: updated
-            })
-        }
-       
-    } catch (error) {
-        res.json({
-            error: error
-        })
-    }
-})
-
-router.put('/newpassword/:id', async (req, res) => {
-
-    const id = req.params.id;
-    const body = req.body;
-    if (!id) return res.status(400).json({error: "El Id no puede estar vacío" });
-
-    //console.log(id)
-    //console.log('body', body)
-
-    const salt = await bcrypt.genSalt(10);
-    const password = await bcrypt.hash(req.body.passwd, salt);
-    //console.log(password);
-
-    try {
-        const UserToModify = await User.findOne({_id: id});
-        //console.log(UserToModify);
-        const UserToUpdate = UserToModify;
-        UserToUpdate.password = password
-        //console.log(UserToUpdate);
-        const updated = await User.findOneAndUpdate(
-            {_id:id},
-            UserToUpdate,
-            {
-                new: true,                       // return updated doc
-                runValidators: true              // validate before update
-            }
-        )
-          res.json({
-            error: null,
-            data: updated
-        })
-    } catch (error) {
-        console.log(error)
-        res.json({
-            estado: false,
-            mensaje: 'Contraseña No pudo ser Actualizada'
-        })
-    }
-})
-
-function decodeJWT(token) {
-    return JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    return transporter.sendMail({
+        from: 'noresponder@aysafi.com',
+        to,
+        subject: 'Recuperación de contraseña',
+        text: 'Recibimos una solicitud para restablecer su contraseña.\n\n' +
+            'Abra este enlace (válido por 30 minutos y de un solo uso):\n' + link + '\n\n' +
+            'Si usted no lo solicitó, ignore este correo: su contraseña no cambiará.',
+        html: '<p>Recibimos una solicitud para restablecer su contraseña.</p>' +
+            '<p><a href="' + link + '"><strong>Restablecer contraseña</strong></a></p>' +
+            '<p>El enlace es válido por 30 minutos y de un solo uso. Si usted no lo solicitó, ' +
+            'ignore este correo: su contraseña no cambiará.</p>'
+    });
 }
 
-router.post('/recover', async(req, res) =>{
-    const {error} = schemaRecover.validate(req.body);
-    if(error) return res.status(400).json({error: error.details[0].message });
+// ---- Administración de usuarios: solo cuentas listadas en ADMIN_EMAILS ----
 
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(400).json({ error: 'Usuario no encontrado' });
-
-    // create token
-    const token = jwt.sign({
-        name: user.name,
-        id: user._id,
-	    privilege: user.privilege
-    }, process.env.TOKEN_SECRET);
-
-    //Envio de email de recuperación
-    const nodemailer = require("nodemailer");
-
-    const transporter = nodemailer.createTransport({
-        host: "mail.aysafi.com",
-        port: 465,
-        secure: true,
-        auth: {
-            // TODO: replace `user` and `pass` values from <https://forwardemail.net>
-            user: process.env.NORESPONDER_SENDER || 'noresponder@aysafi.com',
-            pass: process.env.NORESPONDER_PASSWORD
-        }
-    });
-    var urirec = (process.env.PUBLIC_URL || "https://smartswitch.aysafi.com") + "/api/user/newpassword/?auth-token=" + token;
-    let mailOptions = {
-    from: "noresponder@aysafi.com",
-    to: req.body.email + ';asdrubal@aysafi.com',
-    subject: 'Correo de Recuperación de Contraseña',
-           // plaintext body
-           text: 'Siga cuidadosamente las siguientes indicaciones!',
-
-           // HTML body
-           html: `<p><b>Hola/b>, Por favor pincha en el siguiente <a href="`+ urirec +`"><strong>LINK</strong></a> para restablecer Contraseña <button onClick="sendUrl();"></button>`,
-           // AMP4EMAIL
-           amp: `<!doctype html>
-           <html ⚡4email>
-             <head>
-               <meta charset="utf-8">
-               <style amp4email-boilerplate>body{visibility:hidden}</style>
-               <script async src="https://cdn.ampproject.org/v0.js"></script>
-               <script async custom-element="amp-anim" src="https://cdn.ampproject.org/v0/amp-anim-0.1.js"></script>
-             </head>
-             <body>
-               <p><b>Hola/b>, Por favor pincha en el siguiente <a href="`+ urirec +`"><strong>LINK</strong></a> para restablecer Contraseña <button onClick="sendUrl();"></button>
-               <amp-img src="https://cldup.com/P0b1bUmEet.png" width="16" height="16"/></p>
-               <p>No embedded image attachments in AMP, so here's a linked nyan cat instead:<br/>
-                 <amp-anim src="https://cldup.com/D72zpdwI-i.gif" width="500" height="350"/></p>
-             </body>
-             <script>
-                function sendUrl(){
-                    var myHeaders = new Headers();
-                    myHeaders.append("auth-token", token);
-
-                    var requestOptions = {
-                    method: 'GET',
-                    headers: myHeaders,
-                    redirect: 'follow'
-                    };
-
-                    fetch("https://smartswitch.aysafi.com/api/user/newpassword", requestOptions)
-                    .then(response => response.text())
-                    .then(result => console.log(result))
-                    .catch(error => console.log('error', error));
-                }
-             </script>
-           </html>`,
-            // An array of attachments
-    attachments: [
-                // String attachment
-    {
-        filename: 'notes.txt',
-        content: 'Some notes about this e-mail',
-        contentType: 'text/plain' // optional, would be detected from the filename
-    },
-    // Binary Buffer attachment
-    {                
-        filename: 'image.png',
-        content: Buffer.from(
-                        'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAQMAAAAlPW0iAAAABlBMVEUAAAD/' +
-                            '//+l2Z/dAAAAM0lEQVR4nGP4/5/h/1+G/58ZDrAz3D/McH8yw83NDDeNGe4U' +
-                            'g9C9zwz3gVLMDA/A6P9/AFGGFyjOXZtQAAAAAElFTkSuQmCC',
-                        'base64'
-    ),
-        cid: 'note@aysafi.com' // should be as unique as possible
-    },
-    
-                // File Stream attachment
-    {
-        filename: 'nyan cat ✔.gif',
-        path: __dirname + '/assets/nyan.gif',
-        cid: 'nyan@example.com' // should be as unique as possible
+router.get('/', requireAdmin, async (req, res) => {
+    try {
+        const data = await User.find().select(SAFE_FIELDS);
+        res.json({ error: null, data });
+    } catch (error) {
+        res.status(500).json({ error: 'No se pudo leer la lista de usuarios.' });
     }
-    ],
-    list: {
-                
-        // List-Help: <mailto:admin@example.com?subject=help>
-        help: 'admin@example.com?subject=help',
-    
-        // List-Unsubscribe: <http://example.com> (Comment)
-        unsubscribe: [
-                    {
-                        url: 'http://example.com/unsubscribe',
-                        comment: 'A short note about this url'
-                    },
-                    'unsubscribe@example.com'
-        ],
-    
-                // List-ID: "comment" <example.com>
-    id: {
-        url: 'mylist.aysafi.com',
-        comment: 'This is my awesome list'
-        }
-    }
-}
-    transporter.sendMail(mailOptions, function(err, data) {
-    if (err) {
-        console.log("Error " + err);
-    } else {
-        console.log("Email sent successfully");
-    }
-    });
-
-    res.json({
-        error: null,
-        data: 'Revise Su Correo electrónico con Instrucciones de Como recuperar la Contraseña'
-    })
 })
 
-router.post('/login', async (req, res) => {
-    // validaciones
+router.put('/services/:id', requireAdmin, async (req, res) => {
+    const { error } = schemaService.validate(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'Id inválido' });
+    try {
+        const updated = await User.findByIdAndUpdate(
+            req.params.id,
+            { $addToSet: { services: req.body.service } },
+            { new: true }
+        ).select(SAFE_FIELDS);
+        if (!updated) return res.status(404).json({ error: 'El Id no existe' });
+        res.json({ error: null, data: updated });
+    } catch (error) {
+        res.status(500).json({ error: 'No se pudo actualizar el usuario.' });
+    }
+})
+
+router.delete('/services/:id', requireAdmin, async (req, res) => {
+    const { error } = schemaService.validate(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'Id inválido' });
+    try {
+        const updated = await User.findOneAndUpdate(
+            { _id: req.params.id, services: req.body.service },
+            { $pull: { services: req.body.service } },
+            { new: true }
+        ).select(SAFE_FIELDS);
+        if (!updated) return res.status(400).json({ error: 'El usuario no existe o no contiene "' + req.body.service + '"' });
+        res.json({ error: null, data: updated });
+    } catch (error) {
+        res.status(500).json({ error: 'No se pudo actualizar el usuario.' });
+    }
+})
+
+router.delete('/:id', requireAdmin, async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'Id inválido' });
+    if (req.params.id === req.user.id) return res.status(400).json({ error: 'No puede eliminar su propia cuenta.' });
+    try {
+        const deleted = await User.findByIdAndDelete(req.params.id).select(SAFE_FIELDS);
+        if (!deleted) return res.status(400).json({ error: 'El Id ya no existe' });
+        res.json({ error: null, data: deleted });
+    } catch (error) {
+        res.status(500).json({ error: 'No se pudo eliminar el usuario.' });
+    }
+})
+
+router.get('/register', requireAdminPage, (req, res) => {
+    res.render('register', { 'title': 'Registro' });
+})
+
+router.post('/register', requireAdmin, async (req, res) => {
+    const { error } = schemaRegister.validate(req.body)
+    if (error) return res.status(400).json({ error: error.details[0].message })
+
+    const isEmailExist = await User.findOne({ email: req.body.email });
+    if (isEmailExist) return res.status(409).json({ error: 'Email ya registrado' })
+
+    const salt = await bcrypt.genSalt(10);
+    const password = await bcrypt.hash(req.body.password, salt);
+
+    try {
+        const saved = await new User({ name: req.body.name, email: req.body.email, password }).save();
+        res.json({ error: null, data: { id: saved._id, name: saved.name, email: saved.email } })
+    } catch (error) {
+        res.status(400).json({ error: 'No se pudo registrar el usuario.' })
+    }
+})
+
+// ---- Sesión ----
+
+router.post('/login', loginLimiter, async (req, res) => {
     const { error } = schemaLogin.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message })
-    
+
     const user = await User.findOne({ email: req.body.email });
-    if (!user) return res.status(403).json({ error: 'Usuario o Contraseña No válidos' });
+    const validPassword = await bcrypt.compare(req.body.password, user ? user.password : DUMMY_HASH);
+    if (!user || !validPassword) return res.status(403).json({ error: 'Usuario o Contraseña No válidos' });
 
-    const validPassword = await bcrypt.compare(req.body.password, user.password);
-    if (!validPassword) return res.status(403).json({ error: 'Usuario o Contraseña No válidos' })
-
-    // create token
     const token = jwt.sign({
         name: user.name,
         id: user._id
-    }, process.env.TOKEN_SECRET, { expiresIn: '30d' });
+    }, process.env.TOKEN_SECRET, { expiresIn: SESSION_DAYS + 'd' });
 
     res.cookie('auth_token', token, {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000
+        maxAge: SESSION_DAYS * 24 * 60 * 60 * 1000
     });
-    res.header('auth-token', token).json({
-        error: null,
-        data: {token}
-    })
-    
-    /*res.json({
-        error: null,
-        data: 'exito bienvenido'
-    })*/
+    res.json({ error: null, data: 'ok' })
 });
 
 router.get('/logout', (req, res) => {
@@ -366,58 +189,75 @@ router.get('/logout', (req, res) => {
     res.redirect('/api/user/login');
 });
 
-router.get('/pwdchange', async(req, res)=>{
-    res.render('pwdchange',{'title': 'Solicitar Cambio Contraseña'});
-});
+// ---- Recuperación de contraseña ----
+// 1) /recover genera un token aleatorio de un solo uso (guarda solo su hash,
+//    vence a los 30 min) y lo envía por correo. Responde siempre lo mismo,
+//    exista o no el correo, para no revelar quién tiene cuenta.
+// 2) El enlace del correo lleva el token en el fragmento (#token=...), que el
+//    navegador nunca envía al servidor: no queda en logs ni en proxies.
+// 3) /newpassword canjea el token (atómico, una sola vez), cambia la
+//    contraseña e invalida las sesiones abiertas.
 
-router.get('/newpassword', async(req, res)=>{
-    res.render('newPassword',{'title': 'Establecer Contraseña'});
-});
+router.post('/recover', recoverLimiter, async (req, res) => {
+    const { error } = schemaRecover.validate(req.body);
+    if (error) return res.status(400).json({ error: error.details[0].message });
 
-router.get('/login', async(req,res)=>{
-    res.render('login',{'title': 'Login'});
-});
-
-router.get('/register', async(req,res)=>{
-    res.render('register',{'title': 'Registro'});
-})
-
-router.post('/register', async (req, res) => {
-
-    // validate user
-    const { error } = schemaRegister.validate(req.body)
-    
-    if (error) {
-        return res.status(400).json(
-            {error: error.details[0].message}
-        )
-    }
-
-    const isEmailExist = await User.findOne({ email: req.body.email });
-    if (isEmailExist) {
-        return res.status(401).json(
-            {error: 'Email ya registrado'}
-        )
-    }
-
-    // hash contraseña
-    const salt = await bcrypt.genSalt(10);
-    const password = await bcrypt.hash(req.body.password, salt);
-
-    const user = new User({
-        name: req.body.name,
-        email: req.body.email,
-        password: password
-    });
     try {
-        const savedUser = await user.save();
-        res.json({
-            error: null,
-            data: savedUser
-        })
+        const user = await User.findOne({ email: req.body.email });
+        if (user) {
+            const token = crypto.randomBytes(32).toString('hex');
+            await User.updateOne({ _id: user._id }, {
+                resetTokenHash: sha256(token),
+                resetTokenExpires: Date.now() + RESET_TTL_MS
+            });
+            const link = (process.env.PUBLIC_URL || 'https://smartswitch.aysafi.com') + '/api/user/newpassword#token=' + token;
+            sendRecoveryMail(user.email, link).catch((err) => console.log('Error enviando correo de recuperación:', err.message));
+        }
+    } catch (err) {
+        console.log('Error en recover:', err.message);
+    }
+
+    res.json({
+        error: null,
+        data: 'Si el correo está registrado, recibirá las instrucciones para restablecer la contraseña.'
+    })
+})
+
+router.post('/newpassword', resetLimiter, async (req, res) => {
+    const { token, passwd, repasswd } = req.body || {};
+    const INVALID_LINK = 'El enlace no es válido o ya expiró. Solicite uno nuevo.';
+
+    if (typeof passwd !== 'string' || passwd.length < 8 || Buffer.byteLength(passwd) > 72) {
+        return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres.' });
+    }
+    if (passwd !== repasswd) return res.status(400).json({ error: 'Las contraseñas no coinciden.' });
+    if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ error: INVALID_LINK });
+
+    try {
+        const password = await bcrypt.hash(passwd, 10);
+        const user = await User.findOneAndUpdate(
+            { resetTokenHash: sha256(token), resetTokenExpires: { $gt: Date.now() } },
+            { password, passwordChangedAt: Date.now(), $unset: { resetTokenHash: 1, resetTokenExpires: 1 } }
+        );
+        if (!user) return res.status(400).json({ error: INVALID_LINK });
+        res.json({ error: null, data: 'Contraseña actualizada. Ya puede iniciar sesión.' });
     } catch (error) {
-        res.status(400).json({error})
+        res.status(500).json({ error: 'No se pudo actualizar la contraseña.' });
     }
 })
+
+// ---- Páginas públicas ----
+
+router.get('/pwdchange', (req, res) => {
+    res.render('pwdchange', { 'title': 'Solicitar Cambio Contraseña' });
+});
+
+router.get('/newpassword', (req, res) => {
+    res.render('newPassword', { 'title': 'Establecer Contraseña' });
+});
+
+router.get('/login', (req, res) => {
+    res.render('login', { 'title': 'Login' });
+});
 
 module.exports = router;

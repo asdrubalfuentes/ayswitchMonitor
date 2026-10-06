@@ -3,6 +3,7 @@ const cors = require("cors");
 const morgan = require('morgan');
 const bodyparser = require('body-parser');
 const app = express();
+app.set('trust proxy', 1);
 const mongoose = require('mongoose');
 const path = require('path');
 morgan.token('path', (req) => (req.originalUrl || req.url).split('?')[0]);

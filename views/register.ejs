@@ -92,8 +92,10 @@
             const res = await data.json()
 
             if(res.error==null){
-                window.location.href = '/api/user/login';
-                console.log(res);
+                mensajeador.innerHTML="";
+                mensajeador.append('Usuario creado: ' + email);
+                mensajeador.setAttribute('style',"color:Green");
+                formRegister.reset();
             }else{
                 console.log(res.error);
                 mensajeador.innerHTML="";

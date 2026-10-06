@@ -15,6 +15,8 @@ router.get('/', (req, res) => {
     }else if(req.user.id==='6557548c9607e1f015508548' || req.user.id==='655754ec9607e1f01550854b'){
         res.redirect('/api/dashboard/roberto/');
         //console.log('reenviado a su dashboard personal', 'http://emqx.aysafi.com:3000');
+    }else{
+        res.status(403).send('Su cuenta aun no tiene un panel asignado. Contacte al administrador.');
     }
 })
 
