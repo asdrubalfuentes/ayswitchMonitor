@@ -54,6 +54,11 @@ const resetLimiter = limiter(60 * 60 * 1000, 10);
 
 const sha256 = (text) => crypto.createHash('sha256').update(text).digest('hex');
 
+// El autocompletado del celular suele dejar espacios al borde y mayúsculas:
+// se normaliza el correo antes de validar y se busca sin distinguir mayúsculas.
+const cleanEmail = (body) => { if (body && typeof body.email === 'string') body.email = body.email.trim(); };
+const findByEmail = (email) => User.findOne({ email }).collation({ locale: 'en', strength: 2 });
+
 let transporter;
 function sendRecoveryMail(to, link) {
     if (!transporter) {
@@ -143,10 +148,11 @@ router.get('/register', requireAdminPage, (req, res) => {
 })
 
 router.post('/register', requireAdmin, async (req, res) => {
+    cleanEmail(req.body);
     const { error } = schemaRegister.validate(req.body)
     if (error) return res.status(400).json({ error: error.details[0].message })
 
-    const isEmailExist = await User.findOne({ email: req.body.email });
+    const isEmailExist = await findByEmail(req.body.email);
     if (isEmailExist) return res.status(409).json({ error: 'Email ya registrado' })
 
     const salt = await bcrypt.genSalt(10);
@@ -163,10 +169,11 @@ router.post('/register', requireAdmin, async (req, res) => {
 // ---- Sesión ----
 
 router.post('/login', loginLimiter, async (req, res) => {
+    cleanEmail(req.body);
     const { error } = schemaLogin.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message })
 
-    const user = await User.findOne({ email: req.body.email });
+    const user = await findByEmail(req.body.email);
     const validPassword = await bcrypt.compare(req.body.password, user ? user.password : DUMMY_HASH);
     if (!user || !validPassword) return res.status(403).json({ error: 'Usuario o Contraseña No válidos' });
 
@@ -199,11 +206,12 @@ router.get('/logout', (req, res) => {
 //    contraseña e invalida las sesiones abiertas.
 
 router.post('/recover', recoverLimiter, async (req, res) => {
+    cleanEmail(req.body);
     const { error } = schemaRecover.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
     try {
-        const user = await User.findOne({ email: req.body.email });
+        const user = await findByEmail(req.body.email);
         if (user) {
             const token = crypto.randomBytes(32).toString('hex');
             await User.updateOne({ _id: user._id }, {
@@ -211,7 +219,9 @@ router.post('/recover', recoverLimiter, async (req, res) => {
                 resetTokenExpires: Date.now() + RESET_TTL_MS
             });
             const link = (process.env.PUBLIC_URL || 'https://smartswitch.aysafi.com') + '/api/user/newpassword#token=' + token;
-            sendRecoveryMail(user.email, link).catch((err) => console.log('Error enviando correo de recuperación:', err.message));
+            sendRecoveryMail(user.email, link)
+                .then((info) => console.log('Correo de recuperación enviado a', user.email, '-', info.response))
+                .catch((err) => console.log('Error enviando correo de recuperación a', user.email, ':', err.message));
         }
     } catch (err) {
         console.log('Error en recover:', err.message);
